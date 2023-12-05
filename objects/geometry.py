@@ -58,6 +58,26 @@ class Cylinder:
         
         return None, None, cap_intersection1, cap_intersection2
 
+    def distance_ray_point_vectorized(self, ray_origin, ray_direction, points):
+        # Convert inputs to NumPy arrays
+        ray_origin = np.array(ray_origin)
+        ray_direction = np.array(ray_direction)
+        points = np.array(points)
+
+        # Calculate vectors from ray origin to all points
+        vectors_to_points = points - ray_origin
+
+        # Project all vectors onto the ray direction
+        t_values = np.dot(vectors_to_points, ray_direction) / np.dot(ray_direction, ray_direction)
+
+        # Calculate the points on the ray closest to the given points
+        closest_points_on_ray = ray_origin + t_values[:, np.newaxis] * ray_direction
+
+        # Calculate the Euclidean distances between all points and their closest points on the ray
+        distances = np.linalg.norm(points - closest_points_on_ray, axis=1)
+
+        return distances
+
     def distance_ray_point(self, ray_origin, ray_direction, point):
         # Calculate the vector from ray origin to the point
         vector_to_point = np.array(point) - np.array(ray_origin)
@@ -72,26 +92,26 @@ class Cylinder:
         distance = np.linalg.norm(np.array(point) - closest_point_on_ray)
         
         return distance
-
-    def check_direction_of_points(self, ray_origin, ray_direction, point1, point2, idx1, idx2):
-
+    
+    def check_dir(self, ray_origin, ray_direction, point):
         # Calculate distances from the ray origin to each point along the ray direction
-        distance_to_point1 = np.dot(np.array(point1) - np.array(ray_origin), ray_direction)
-        distance_to_point2 = np.dot(np.array(point2) - np.array(ray_origin), ray_direction)
+        distance_to_point = np.dot(np.array(point) - np.array(ray_origin), ray_direction)
+        return distance_to_point >= 0
 
-        # Determine which point is in the direction of the ray
-        if distance_to_point1 < distance_to_point2:
-            return idx2
-        elif distance_to_point2 < distance_to_point1:
-            return idx1
-        else:
-            return None
 
     def search_nearest_sensor_for_ray(self, ray_origin, ray_direction):
-        distances  = [self.distance_ray_point(ray_origin,ray_direction,p) for p in self.all_points]
+        #distances  = [self.distance_ray_point(ray_origin,ray_direction,p) for p in self.all_points]
+        distances = self.distance_ray_point_vectorized(ray_origin, ray_direction, self.all_points)
         indices    = np.argsort(distances)
-        found_idx  = self.check_direction_of_points(ray_origin, ray_direction, self.all_points[indices[0]], self.all_points[indices[1]], indices[0], indices[1])
+
+        found_idx = None
+        for i in indices:
+            if self.check_dir(ray_origin, ray_direction, self.all_points[i]):
+                found_idx = i
+                break
+
         return self.all_points[found_idx], distances[found_idx], found_idx
+
 
     def place_photosensors(self, barrel_grid, cap_rings):
 
@@ -130,6 +150,24 @@ class Cylinder:
         self.bcap_points = np.array(bcap_points)
 
         self.all_points = np.concatenate([self.barr_points, self.tcap_points, self.bcap_points],axis=0)
+
+        # let's make this generic format... ID to 3D pos dictionary
+        self.ID_to_position = {i:self.all_points[i] for i in range(len(self.all_points))}
+
+        self.ID_to_case = {}
+        Nbarr = len(self.barr_points)
+        Ntcap = len(self.tcap_points)
+        Nbcap = len(self.bcap_points)
+        for i in range(len(self.all_points)):
+            if i<Nbarr:
+                self.ID_to_case[i] = 0
+            elif Nbarr<=i<Ntcap+Nbarr:
+                self.ID_to_case[i] = 1
+            elif Ntcap+Nbarr<=i<Nbcap+Ntcap+Nbarr:
+                self.ID_to_case[i] = 2
+            else:
+                print("check: place_photosensors! this should not be happening: ", Nbarr, Ntcap, Nbcap, i)
+
         # -----------
 
 
