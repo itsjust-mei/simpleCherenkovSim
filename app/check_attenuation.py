@@ -30,16 +30,8 @@ for n in range(Nphot):
     sensor_coordinates, dist, sensor_idx = detector.search_nearest_sensor_for_ray(ray_origin,ray_direction)
 
     if dist < cyl_sensor_radius:
-        ID_to_PE[sensor_idx] += 1
-
-# uncomment this to have 3D display
-# scene    = Scene()
-# scene.add_photocounts(detector, ID_to_PE)
-# scene.show(detector)
-
-# uncomment this to have 2D display
-# show_2D_display(detector.ID_to_position, ID_to_PE, detector.ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height, file_name='isotropic_dist.pdf')
-
+        R = point_to_point_dist([0,0,0],sensor_coordinates)
+        ID_to_PE[sensor_idx] += 1*attenuation_weight(R)
 
 # grouping light yield per distance
 R_to_PE    = {}
@@ -59,19 +51,25 @@ for key,value in R_to_PE.items():
     y.append(np.mean(value))
     y_err.append(np.std(value))
 
-print(x)
 x = [float(i) for i in x]
 x = np.array(x)
 
 plt.errorbar(x, y*(x**2), y_err, fmt='o', color='k')
 
-plt.gca().set_ylim(0., 1.5*max(y*(x**2)))
+plt.gca().set_ylim(0., 4.5*max(y*(x**2)))
 
 plt.gca().set_ylabel('<PE> * r^2')
 plt.gca().set_xlabel('<PE>')
 
+print(y*(x**2)/attenuation_weight(x))
+plt.errorbar(x, y*(x**2)/attenuation_weight(x), y_err, fmt='o', color='r')
+
+# x_pred = np.linspace(0,10,100)
+# y_pred = attenuation_weight(x)
+
+# plt.plot(x_pred,y_pred)
+
+# plt.gca().set_xlabel('length')
+# plt.gca().set_ylabel('normalization')
+
 plt.show()
-
-
-
-

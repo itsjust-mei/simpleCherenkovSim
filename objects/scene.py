@@ -141,26 +141,28 @@ class Scene: # a basic object to plot 3D things
 
 
 
-    def add_photocounts(self, det, counts_per_sensor, colors=['k','k','k']):
+    def add_photocounts(self, det, counts_per_sensor, show_all=True, colors=['k','k','k']):
         
         max_cnts = np.max(list(counts_per_sensor.values()))
         print(max_cnts)
         color_gradient = create_color_gradient(max_cnts)
 
+        j = 0
         for i, p_list in enumerate([det.barr_points, det.tcap_points, det.bcap_points]):
 
             x = p_list[:,0]
             y = p_list[:,1]
             z = p_list[:,2]
 
-            j = 0
+            
             for _x,_y,_z in zip(x,y,z):
-                if i == 0: # barrel
-                    self.plot_3d_circle_surface([_x,_y,_z], det.A, [_x,_y, 0]/np.linalg.norm([_x,_y, 0]), r=det.S_radius, c=color_gradient.to_rgba(counts_per_sensor[j]))
-                    self.plot_2d_circle_in_3d([_x,_y,_z], det.A, [_x,_y, 0]/np.linalg.norm([_x,_y, 0]), r=det.S_radius, c=colors[i])
-                else:      # caps
-                    self.plot_3d_circle_surface([_x,_y,_z], [1,0,0], det.A, det.S_radius, c=color_gradient.to_rgba(counts_per_sensor[j]))
-                    self.plot_2d_circle_in_3d([_x,_y,_z], [1,0,0], det.A, det.S_radius, c=colors[i])
+                if show_all or counts_per_sensor[j]:
+                    if i == 0: # barrel
+                        self.plot_3d_circle_surface([_x,_y,_z], det.A, [_x,_y, 0]/np.linalg.norm([_x,_y, 0]), r=det.S_radius, c=color_gradient.to_rgba(counts_per_sensor[j]))
+                        self.plot_2d_circle_in_3d([_x,_y,_z], det.A, [_x,_y, 0]/np.linalg.norm([_x,_y, 0]), r=det.S_radius, c=colors[i])
+                    else:      # caps
+                        self.plot_3d_circle_surface([_x,_y,_z], [1,0,0], det.A, det.S_radius, c=color_gradient.to_rgba(counts_per_sensor[j]))
+                        self.plot_2d_circle_in_3d([_x,_y,_z], [1,0,0], det.A, det.S_radius, c=colors[i])
 
                 j+=1
 

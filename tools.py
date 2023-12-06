@@ -17,9 +17,27 @@ def create_color_gradient(max_cnts, colormap='viridis'):
 
     return scalar_mappable
 
+def generate_isotropic_random_vector():
+    # Generate random azimuthal angle (phi) in the range [0, 2*pi)
+    phi = 2 * np.pi * np.random.rand()
+
+    # Generate random polar angle (theta) in the range [0, pi)
+    theta = np.arccos(2 * np.random.rand() - 1)
+
+    # Convert spherical coordinates to Cartesian coordinates
+    x = np.sin(theta) * np.cos(phi)
+    y = np.sin(theta) * np.sin(phi)
+    z = np.cos(theta)
+
+    return np.array([x, y, z])
+
+def attenuation_weight(x, L = 5):
+    return np.exp(-x/L)
+
+
 def show_2D_display(ID_to_position, ID_to_PE, ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height, file_name=None):
 
-    max_PE = np.max(list(ID_to_position.values()))
+    max_PE = np.max(list(ID_to_PE.values()))
     color_gradient = create_color_gradient(max_PE)
 
 

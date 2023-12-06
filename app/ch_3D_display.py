@@ -23,7 +23,7 @@ ID_to_PE = {i:0 for i in range(len(detector.all_points))}
 
 stime = time.time()
 
-for i in range(5):
+for i in range(1):
     track_origin        = [0,1,2.5]
     track_direction     = np.array([-1+2*np.random.uniform() for _ in range(3)])
     track_direction     = track_direction/np.linalg.norm(track_direction)
@@ -52,4 +52,12 @@ for i in range(5):
             ID_to_PE[sensor_idx] += 1
 
 print('execution time: ', f"{time.time()-stime}:{2}.f")
-show_2D_display(detector.ID_to_position, ID_to_PE, detector.ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height, file_name='evt_example.pdf')
+
+scene    = Scene()
+scene.add_photocounts(detector, ID_to_PE, show_all=False)
+scene.show(detector)
+#show_2D_display(detector.ID_to_position, ID_to_PE, detector.ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height, file_name='evt_example.pdf')
+
+
+
+
