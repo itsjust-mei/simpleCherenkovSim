@@ -15,6 +15,10 @@ class Cylinder:
         # Ray: P = O + tD, where P is a point on the ray, O is the ray origin, D is the ray direction, and t is a parameter.
         # Cylinder: (P - C - ((P - C) dot A)A)^2 = r^2, where C is the cylinder center, A is the cylinder axis, and r is the radius.
 
+        print('--------')
+        intersection_point1 = 0
+        intersection_point2 = 0
+
         # Define the variables
         O = np.array(ray_origin)
         D = np.array(ray_direction)
@@ -37,11 +41,18 @@ class Cylinder:
             t2 = (-b - np.sqrt(discriminant)) / (2 * a)
 
             # Check if the intersection points are in the positive direction of the ray
-            intersection_point1 = O + t1 * D if t1 >= 0 and 0 <= (O + t1 * D - C).dot(A) <= H/2 else None
-            intersection_point2 = O + t2 * D if t2 >= 0 and 0 <= (O + t2 * D - C).dot(A) <= H/2 else None
+            intersection_point1 = O + t1 * D #if t1 >= 0 and 0 <= (O + t1 * D - C).dot(A) <= H/2 else None
+            intersection_point2 = O + t2 * D #if t2 >= 0 and 0 <= (O + t2 * D - C).dot(A) <= H/2 else None
 
-            if intersection_point1 is not None or intersection_point2 is not None:
-                return intersection_point1, intersection_point2, None, None
+            # print(intersection_point1, intersection_point2)
+
+            # if intersection_point1 is not None:
+            #     return intersection_point1
+
+            # if intersection_point2 is not None:
+            #     return intersection_point2
+
+            #print('aaaa:' ,intersection_point1, intersection_point2)
 
         # If no intersection with the barrel, check for intersection with the caps
         t_cap1 = (H/2 - (O - C).dot(A)) / D.dot(A) if D.dot(A) != 0 else np.inf
@@ -50,13 +61,26 @@ class Cylinder:
         cap_intersection1 = O + abs(t_cap1) * D
         cap_intersection2 = O + abs(t_cap2) * D
 
-        if t_cap1 == 0:
-            cap_intersection1 = None
+        # print('cap int: ',cap_intersection1, cap_intersection2, np.sum(cap_intersection1), np.sum(cap_intersection2))
 
-        if t_cap2 == 0:
-            cap_intersection2 = None
-        
-        return None, None, cap_intersection1, cap_intersection2
+        # if np.sum(cap_intersection1) == 0:
+        #     return cap_intersection2
+
+        # if np.sum(cap_intersection2) == 0:
+        #     return cap_intersection1
+
+        print()
+
+        # assert t_cap1 > 0 and t_cap2 > 0
+
+        # if t_cap1 > 0:
+        #     return cap_intersection2
+
+        # if t_cap2 > 0:
+        #     return cap_intersection1
+
+        #print(t_cap1, t_cap2, cap_intersection1, cap_intersection2)
+        return None
 
     def distance_ray_point_vectorized(self, ray_origin, ray_direction, points):
         # Convert inputs to NumPy arrays
@@ -93,6 +117,26 @@ class Cylinder:
         
         return distance
     
+    # def check_dir(self, ray_origin, ray_direction, point):
+    #     # Calculate distances from the ray origin to each point along the ray direction
+    #     distance_to_point = np.dot(np.array(point) - np.array(ray_origin), ray_direction)
+    #     return distance_to_point >= 0
+
+
+    # def search_nearest_sensor_for_ray(self, ray_origin, ray_direction):
+    #     #distances  = [self.distance_ray_point(ray_origin,ray_direction,p) for p in self.all_points]
+    #     distances = self.distance_ray_point_vectorized(ray_origin, ray_direction, self.all_points)
+    #     indices    = np.argsort(distances)
+
+    #     found_idx = None
+    #     for i in indices:
+    #         if self.check_dir(ray_origin, ray_direction, self.all_points[i]):
+    #             found_idx = i
+    #             break
+
+    #     return self.all_points[found_idx], distances[found_idx], found_idx
+
+
     def check_dir(self, ray_origin, ray_direction, point):
         # Calculate distances from the ray origin to each point along the ray direction
         distance_to_point = np.dot(np.array(point) - np.array(ray_origin), ray_direction)
@@ -102,13 +146,17 @@ class Cylinder:
     def search_nearest_sensor_for_ray(self, ray_origin, ray_direction):
         #distances  = [self.distance_ray_point(ray_origin,ray_direction,p) for p in self.all_points]
         distances = self.distance_ray_point_vectorized(ray_origin, ray_direction, self.all_points)
-        indices    = np.argsort(distances)
+        distance_to_point = np.dot(np.array(self.all_points) - np.array(ray_origin), ray_direction)
+        # found_idx = np.where(np.min(distances[distance_to_point > 0])==distances)[0][0]
 
-        found_idx = None
-        for i in indices:
-            if self.check_dir(ray_origin, ray_direction, self.all_points[i]):
-                found_idx = i
-                break
+        # Filter out distances corresponding to points in the opposite direction of the ray
+        valid_distances = distances[distance_to_point > 0]
+        
+        # Find the index of the minimum distance
+        min_distance_index = np.argmin(valid_distances)
+        
+        # Find the overall index in the original array
+        found_idx = np.where(distance_to_point > 0)[0][min_distance_index]
 
         return self.all_points[found_idx], distances[found_idx], found_idx
 

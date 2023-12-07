@@ -51,5 +51,12 @@ for i in range(5):
         if dist < cyl_sensor_radius:
             ID_to_PE[sensor_idx] += 1
 
-print('execution time: ', f"{time.time()-stime}:{2}.f")
+
+print('execution time: ', f"{time.time()-stime:.2f}")
 show_2D_display(detector.ID_to_position, ID_to_PE, detector.ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height, file_name='evt_example.pdf')
+
+
+
+
+
+

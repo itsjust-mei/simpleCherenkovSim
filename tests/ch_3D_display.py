@@ -51,7 +51,7 @@ for i in range(1):
         if dist < cyl_sensor_radius:
             ID_to_PE[sensor_idx] += 1
 
-print('execution time: ', f"{time.time()-stime}:{2}.f")
+print('execution time: ', f"{time.time()-stime:.2f}")
 
 scene    = Scene()
 scene.add_photocounts(detector, ID_to_PE, show_all=False)

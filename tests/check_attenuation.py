@@ -1,6 +1,7 @@
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+import time
 from objects.geometry import *
 from objects.ray import *
 from objects.scene import *
@@ -20,6 +21,8 @@ ray_origin        = [0,0,0]
 detector = Cylinder(cyl_center, cyl_axis, cyl_radius, cyl_height, cyl_barrel_grid, cyl_cap_rings, cyl_sensor_radius)
 Nphot = 1000000
 
+stime = time.time()
+
 ID_to_PE = {i:0 for i in range(len(detector.all_points))}
 for n in range(Nphot):
 
@@ -32,6 +35,9 @@ for n in range(Nphot):
     if dist < cyl_sensor_radius:
         R = point_to_point_dist([0,0,0],sensor_coordinates)
         ID_to_PE[sensor_idx] += 1*attenuation_weight(R)
+
+print('execution time: ', f"{time.time()-stime:.2f}")
+
 
 # grouping light yield per distance
 R_to_PE    = {}
