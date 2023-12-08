@@ -2,6 +2,7 @@ import time
 import numpy as np
 import torch
 import pandas as pd
+import h5py
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
@@ -270,7 +271,7 @@ cyl_sensor_radius = 0.25
 detector = Cylinder(cyl_center, cyl_axis, cyl_radius, cyl_height, cyl_barrel_grid, cyl_cap_rings, cyl_sensor_radius)
 
 ### simulation mode ---- 0: isotropic; 1: cherenkov.
-SIM_MODE = 1
+SIM_MODE = 0
 use_light = True  # store only 'real data' info. Change to false to store info for all photons.
 ###
 
@@ -280,18 +281,24 @@ xs, ys, zs = generate_dataset_origins(cylinder_center, cylinder_heights, cylinde
 stime = time.perf_counter()
 Ndatasets = 1 #len(xs) # iterate over all 3D gird points
 for ds_id in range(Ndatasets):
-    f_outfile = h5py.File(config.output_file, 'w')
+    f_outfile = h5py.File('datasets/sim_mode_'+str(SIM_MODE)+'_dataset_'+str(ds_id)+'_events.h5', 'w')
     print('Dataset: ', ds_id)
-    Nevents = 1
+    Nevents = 2
     Ntrk    = 1
     # one event is one track!! (logic is set up accordingly)
+    Nhits = 0 # this is a counter
 
     # define all fields for h5 output file.
     # actually many of this will not be used (stored) depending on the SIM_MODE
     # One could pre-define the size of all of this arrays to not use .append... but it seems a sub-leading issue in the computation time.
-    evt_ids      = []  # a unique idenfitifier for the event (actually in the end the datasets have only 1 event)
-    evt_origins  = []  # the origin position for every event.
-    evt_displays = []  # the event display (counts in every photosensor ID; the array index corresponds to the ID).
+    evt_ids          = []  # a unique idenfitifier for the event (actually in the end the datasets have only 1 event)
+    evt_origins      = []  # the origin position for every event.
+    evt_displays     = []  # the event display (counts in every photosensor ID; the array index corresponds to the ID).
+    event_hits_index = []  # the last index in the list of PMT IDs.
+
+
+
+
 
     trk_origins = []  # If we are using tracks, instead of points to simulate the photons, we can store that info here. 
     trk_dirs    = []  # If we are using tracks, instead of points to simulate the photons, we can store that info here.
@@ -310,7 +317,7 @@ for ds_id in range(Ndatasets):
         track_direction = None
         L               = None
 
-        if SIM_MODE == 1:
+        if SIM_MODE == 0:
             # let's chose the vertex uniformely in a 2x2x2 box around the [0,0,0].
             track_origin        = [xs[ds_id], ys[ds_id], zs[ds_id]]
 
@@ -328,7 +335,7 @@ for ds_id in range(Ndatasets):
 
             Nphot = None
             if SIM_MODE == 0:
-                Nphot = 50000
+                Nphot = 5000
             elif SIM_MODE == 1:
                 # let's make that every cherenkov track has 1000 photons.
                 Nphot = int(400*L)
@@ -359,33 +366,40 @@ for ds_id in range(Ndatasets):
             idx, cts = np.unique(good_indices, return_counts=True)
             ID_to_PE[idx] = cts
 
+            non_null_indices = np.where(ID_to_PE != 0)[0]
+            Nhits += len(non_null_indices)
+            event_hits_index.append(Nhits)
+
         ray_origins.append(origs)
         ray_dirs.append(vects)
         evt_displays.append(ID_to_PE)
-    
-    evts = None
-    
-    if use_light == True:
-        evts = {
-            'evt_id': evt_ids,
-            'evt_origin': evt_origins,
-            'PE': evt_displays,
-        } 
-    else:
-        evts = {
-            'evt_ids': evt_ids,
-            'trk_origins': trk_origins,
-            'trk_dirs': trk_dirs,
-            'trk_lengths': trk_lengths,
-            'ray_origins': ray_origins,
-            'ray_dirs': ray_dirs,
-            'PE': evt_displays,
-        }
+        
 
-    evts_df = pd.DataFrame(evts)
-    evts_df.to_hdf('datasets/sim_mode_'+str(SIM_MODE)+'_dataset_'+str(ds_id)+'_events.h5',key='data',  mode='w')
-    
-    del evts, evts_df, evt_ids, trk_origins, trk_dirs, trk_lengths, ray_origins, ray_dirs, evt_displays
+    h5_evt_ids     = f_outfile.create_dataset("evt_id",           shape=(Nevents,),    dtype=np.int32)
+    h5_evt_pos     = f_outfile.create_dataset("positions",        shape=(Nevents,1,3), dtype=np.float32)
+    h5_evt_hit_idx = f_outfile.create_dataset("event_hits_index", shape=(Nevents,),    dtype=np.int64)
+    h5_evt_hit_IDs = f_outfile.create_dataset("hit_pmt",          shape=(Nhits,),      dtype=np.int32)
+    h5_evt_hit_Qs  = f_outfile.create_dataset("hit_charge",       shape=(Nhits,),      dtype=np.float32)
+    h5_evt_hit_Ts  = f_outfile.create_dataset("hit_time",         shape=(Nhits,),      dtype=np.float32)
+
+
+    pre_idx = 0
+    for i in range(Nevents):
+
+        non_null_indices = np.where(evt_displays[i] != 0)[0]
+        non_null_PMT_Q = evt_displays[i][non_null_indices]
+        h5_evt_ids[i]     = evt_ids[i]
+        h5_evt_pos[i]     = evt_origins[i]
+        h5_evt_hit_idx[i] = event_hits_index[i]
+        h5_evt_hit_IDs[pre_idx:event_hits_index[i]] = non_null_indices
+        h5_evt_hit_Qs[pre_idx:event_hits_index[i]]  = non_null_PMT_Q
+        h5_evt_hit_Ts[pre_idx:event_hits_index[i]]  = np.zeros(len(non_null_PMT_Q))
+        pre_idx = event_hits_index[i]
+
+    f_outfile.close()
+
+    #del evts, evts_df, 
+    del evt_ids, trk_origins, trk_dirs, trk_lengths, ray_origins, ray_dirs, evt_displays
 #-----------------------------
 
 # store geom information
@@ -403,16 +417,20 @@ print('Torch exec. time: ', f"{time.perf_counter()-stime:.2f} s.")
 # uncomment the lines below (and modifiy as necessary) if you want to open created file and plot it.
 # this makes obviously more sense in a notebook.
 
-evts_df = pd.read_hdf('datasets/sim_mode_'+str(SIM_MODE)+'_dataset_0_events.h5')
-geom_df = pd.read_hdf('datasets/sim_mode_'+str(SIM_MODE)+'_dataset_geom.h5')
 
-evt_ID = 0
+# geom_df = pd.read_hdf('datasets/sim_mode_'+str(SIM_MODE)+'_dataset_geom.h5')
 
-ID_to_position = {i:x for i,x in enumerate(geom_df.positions)}
-ID_to_case = {i:x for i,x in enumerate(geom_df.case)}
-ID_to_PE = {i:x for i,x in enumerate(evts_df.iloc[evt_ID].PE)}
 
-show_2D_display(ID_to_position, ID_to_PE, ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height)#, file_name='evt_example.pdf')
+
+# evts_df = pd.read_hdf('datasets/sim_mode_'+str(SIM_MODE)+'_dataset_0_events.h5')
+
+# evt_ID = 0
+
+# ID_to_position = {i:x for i,x in enumerate(geom_df.positions)}
+# ID_to_case = {i:x for i,x in enumerate(geom_df.case)}
+# ID_to_PE = {i:x for i,x in enumerate(evts_df.iloc[evt_ID].PE)}
+
+# show_2D_display(ID_to_position, ID_to_PE, ID_to_case, cyl_sensor_radius, cyl_radius, cyl_height)#, file_name='evt_example.pdf')
 
 
 
