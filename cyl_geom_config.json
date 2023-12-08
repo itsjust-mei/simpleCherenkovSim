@@ -1,0 +1,17 @@
+{
+  "cylinder_parameters": {
+    "center": [0, 0],
+    "heights": [-4, -3, -2, -1, 0, 1, 2, 3, 4],
+    "radii": [5, 2.5, 0],
+    "divisions": [8, 4, 1]
+  },
+  "geometry_definitions": {
+    "center": [0, 0, 0],
+    "axis": [0, 0, 1],
+    "radius": 6,
+    "height": 10,
+    "barrel_grid": [14, 48],
+    "cap_rings": [40, 34, 30, 24, 20, 16, 10, 5, 1],
+    "sensor_radius": 0.25
+  }
+}
