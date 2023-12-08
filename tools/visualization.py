@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from matplotlib.colors import LinearSegmentedColormap, Normalize
+import numpy as np
 
 def create_color_gradient(max_cnts, colormap='viridis'):
     """Define the color scale in the 2D event display"""

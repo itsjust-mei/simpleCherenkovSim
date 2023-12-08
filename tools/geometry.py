@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import json
+from scipy.spatial.transform import Rotation
 
 def generate_dataset_origins(center, heights, radii, divisions):
     """Creates a collection of origins for the dataset generation."""
@@ -28,58 +29,109 @@ def rotate_vector(vector, axis, angle):
     return cos_angle * vector + sin_angle * cross_product + dot_product * axis
         
 def normalize(v):
-    """ Normalize the input vector. """
+    """ Normalize a vector. """
     norm = np.linalg.norm(v)
-    if norm == 0: 
-        return v
-    return v / norm
+    return v / norm if norm != 0 else v
 
 def generate_isotropic_random_vectors(N=1):
     """ A function to generate N isotropic random vectors. """
-    vectors = []
+    # Generate random azimuthal angles (phi) in the range [0, 2*pi)
+    phi = 2 * np.pi * np.random.rand(N)
 
-    for _ in range(N):
-        # Generate random azimuthal angle (phi) in the range [0, 2*pi)
-        phi = 2 * np.pi * np.random.rand()
+    # Generate random polar angles (theta) in the range [0, pi)
+    theta = np.arccos(2 * np.random.rand(N) - 1)
 
-        # Generate random polar angle (theta) in the range [0, pi)
-        theta = np.arccos(2 * np.random.rand() - 1)
+    # Convert spherical coordinates to Cartesian coordinates
+    x = np.sin(theta) * np.cos(phi)
+    y = np.sin(theta) * np.sin(phi)
+    z = np.cos(theta)
 
-        # Convert spherical coordinates to Cartesian coordinates
-        x = np.sin(theta) * np.cos(phi)
-        y = np.sin(theta) * np.sin(phi)
-        z = np.cos(theta)
+    # Stack the Cartesian coordinates into a 2D array
+    vectors = np.column_stack((x, y, z))
 
-        vectors.append(normalize(np.array([x, y, z])))
+    # Normalize the vectors
+    vectors_normalized = vectors / np.linalg.norm(vectors, axis=1, keepdims=True)
 
-    return vectors
+    return vectors_normalized
+
+# def generate_vectors_on_cone_surface(R, theta, num_vectors=10):
+#     """ Generate vectors on the surface of a cone around R. """
+#     R = normalize(R)
+#     vectors = []
+
+#     for _ in range(num_vectors):
+#         # Random azimuthal angle from 0 to 2pi
+#         phi = np.random.uniform(0, 2 * np.pi)
+
+#         # Spherical to Cartesian coordinates in the local system
+#         x = np.sin(theta) * np.cos(phi)
+#         y = np.sin(theta) * np.sin(phi)
+#         z = np.cos(theta)
+
+#         local_vector = np.array([x, y, z])
+
+#         # Find rotation axis and angle to align local z-axis with R
+#         z_axis = np.array([0, 0, 1])
+#         axis = np.cross(z_axis, R)
+#         if np.linalg.norm(axis) != 0:  # If R is not already along z-axis
+#             angle = np.arccos(np.dot(z_axis, R))
+#             local_vector = rotate_vector(local_vector, axis, angle)
+
+#         vectors.append(local_vector)
+
+#     return np.array(vectors)
+
 
 def generate_vectors_on_cone_surface(R, theta, num_vectors=10):
     """ Generate vectors on the surface of a cone around R. """
     R = normalize(R)
-    vectors = []
 
-    for _ in range(num_vectors):
-        # Random azimuthal angle from 0 to 2pi
-        phi = np.random.uniform(0, 2 * np.pi)
+    # Generate random azimuthal angles from 0 to 2pi
+    phi_values = np.random.uniform(0, 2 * np.pi, num_vectors)
 
-        # Spherical to Cartesian coordinates in the local system
-        x = np.sin(theta) * np.cos(phi)
-        y = np.sin(theta) * np.sin(phi)
-        z = np.cos(theta)
+    # Spherical to Cartesian coordinates in the local system
+    x_values = np.sin(theta) * np.cos(phi_values)
+    y_values = np.sin(theta) * np.sin(phi_values)
+    z_value = np.cos(theta)
 
-        local_vector = np.array([x, y, z])
+    local_vectors = np.column_stack((x_values, y_values, z_value * np.ones_like(x_values)))
+    #local_vectors = np.column_stack((x_values, y_values, z_values))
 
-        # Find rotation axis and angle to align local z-axis with R
-        z_axis = np.array([0, 0, 1])
-        axis = np.cross(z_axis, R)
-        if np.linalg.norm(axis) != 0:  # If R is not already along z-axis
-            angle = np.arccos(np.dot(z_axis, R))
-            local_vector = rotate_vector(local_vector, axis, angle)
+    # Find rotation axis and angle to align local z-axis with R
+    z_axis = np.array([0, 0, 1])
+    axis = np.cross(z_axis, R)
+    non_zero_indices = np.linalg.norm(axis, axis=-1) != 0  # Check for non-zero norms
 
-        vectors.append(local_vector)
+    # If R is not already along z-axis
+    #angles = np.arccos(np.einsum('ij,ij->i', z_axis, R[non_zero_indices]))
+    angles = np.arccos(np.sum(z_axis * R[non_zero_indices], axis=-1))
 
-    return np.array(vectors)
+
+    # Apply rotation to vectors
+    rotated_vectors = rotate_vector_batch(local_vectors[non_zero_indices], axis[non_zero_indices], angles)
+
+    # Update the original local vectors with rotated vectors
+    local_vectors[non_zero_indices] = rotated_vectors
+
+    # Convert local vectors to global coordinates
+    vectors = np.dot(local_vectors, np.linalg.norm(R))
+
+    return vectors
+
+def rotate_vector_batch(vectors, axes, angles):
+    """ Rotate multiple vectors by specified angles around the given axes. """
+    norms = np.linalg.norm(axes, axis=-1)
+    axes_normalized = axes / norms[:, np.newaxis]
+    quaternion = Rotation.from_rotvec(axes_normalized * angles[:, np.newaxis]).as_quat()
+
+    # Reshape vectors to (50000, 3) if needed
+    if vectors.shape[0] == 1:
+        vectors = vectors.reshape(-1, 3)
+
+    rotated_vectors = Rotation.from_quat(quaternion).apply(vectors)
+
+    return rotated_vectors
+
 
 def check_hits_vectorized_per_track_torch(ray_origin, ray_direction, sensor_radius, points):
     """ For a collection of photons calculate the list of ID of the PMTs that get hit."""
@@ -196,9 +248,8 @@ def load_config(file_path):
         config = json.load(file)
     return config
 
-def generate_detector(file_path):
-    """Function to generate cylinder from json config"""
-
+def load_cyl_geom(file_path):
+    
     # Load configuration from JSON file
     config = load_config(file_path)
 
@@ -211,6 +262,12 @@ def generate_detector(file_path):
     cyl_cap_rings         = config['geometry_definitions']['cap_rings']
     cyl_sensor_radius     = config['geometry_definitions']['sensor_radius']
 
+    return cyl_center, cyl_axis, cyl_radius, cyl_radius, cyl_height, cyl_barrel_grid, cyl_cap_rings, cyl_sensor_radius
+
+
+def generate_detector(file_path):
+    """Function to generate cylinder from json config"""
+    cyl_center, cyl_axis, cyl_radius, cyl_radius, cyl_height, cyl_barrel_grid, cyl_cap_rings, cyl_sensor_radius = load_cyl_geom(file_path)
     return Cylinder(cyl_center, cyl_axis, cyl_radius, cyl_height, cyl_barrel_grid, cyl_cap_rings, cyl_sensor_radius)
 
 
