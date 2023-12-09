@@ -54,34 +54,6 @@ def generate_isotropic_random_vectors(N=1):
 
     return vectors_normalized
 
-# def generate_vectors_on_cone_surface(R, theta, num_vectors=10):
-#     """ Generate vectors on the surface of a cone around R. """
-#     R = normalize(R)
-#     vectors = []
-
-#     for _ in range(num_vectors):
-#         # Random azimuthal angle from 0 to 2pi
-#         phi = np.random.uniform(0, 2 * np.pi)
-
-#         # Spherical to Cartesian coordinates in the local system
-#         x = np.sin(theta) * np.cos(phi)
-#         y = np.sin(theta) * np.sin(phi)
-#         z = np.cos(theta)
-
-#         local_vector = np.array([x, y, z])
-
-#         # Find rotation axis and angle to align local z-axis with R
-#         z_axis = np.array([0, 0, 1])
-#         axis = np.cross(z_axis, R)
-#         if np.linalg.norm(axis) != 0:  # If R is not already along z-axis
-#             angle = np.arccos(np.dot(z_axis, R))
-#             local_vector = rotate_vector(local_vector, axis, angle)
-
-#         vectors.append(local_vector)
-
-#     return np.array(vectors)
-
-
 def generate_vectors_on_cone_surface(R, theta, num_vectors=10):
     """ Generate vectors on the surface of a cone around R. """
     R = normalize(R)

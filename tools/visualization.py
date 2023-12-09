@@ -23,12 +23,13 @@ def show_2D_display(ID_to_position, ID_to_PE, ID_to_case, cyl_sensor_radius, cyl
 
     fig, ax = plt.subplots(figsize=(8,8),facecolor='black')
 
+    corr = cyl_radius/cyl_height
+    caps_offset = -0.1
+
     for ID in list(ID_to_position.keys()):
         pos   = ID_to_position[ID]
         PE    = ID_to_PE[ID]
         case  = ID_to_case[ID]
-
-        caps_offset = 0.05
 
         #barrel
         if case ==0:
@@ -42,10 +43,10 @@ def show_2D_display(ID_to_position, ID_to_PE, ID_to_case, cyl_sensor_radius, cyl
             ax.add_patch(plt.Circle((theta, z), cyl_sensor_radius/cyl_height, color=color_gradient.to_rgba(PE)))
 
         elif case ==1:
-            ax.add_patch(plt.Circle((pos[0]/cyl_height+np.pi/2, 1+caps_offset+pos[1]/cyl_height), cyl_sensor_radius/cyl_height, color=color_gradient.to_rgba(PE)))
+            ax.add_patch(plt.Circle((corr*pos[0]/cyl_height+np.pi/2, 1+corr*(caps_offset+pos[1]/cyl_height)), cyl_sensor_radius/cyl_height, color=color_gradient.to_rgba(PE)))
 
         elif case ==2:
-            ax.add_patch(plt.Circle((pos[0]/cyl_height+np.pi/2, -1-caps_offset-pos[1]/cyl_height), cyl_sensor_radius/cyl_height, color=color_gradient.to_rgba(PE)))
+            ax.add_patch(plt.Circle((corr*pos[0]/cyl_height+np.pi/2,-1+corr*(-caps_offset-pos[1]/cyl_height)), cyl_sensor_radius/cyl_height, color=color_gradient.to_rgba(PE)))
 
     margin = 0.05
 

@@ -43,7 +43,7 @@ N_photosensors = len(detector.all_points)
 xs, ys, zs = generate_dataset_point_grid(json_filename)
 
 # iterate over all 3D gird points
-Ndatasets = len(xs) 
+Ndatasets = 1 #len(xs) 
 
 for ds_id in range(Ndatasets):
     
