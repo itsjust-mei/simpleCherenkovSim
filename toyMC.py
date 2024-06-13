@@ -43,15 +43,17 @@ N_photosensors = len(detector.all_points)
 xs, ys, zs = generate_dataset_point_grid(json_filename)
 
 # iterate over all 3D gird points
-Ndatasets = 1 #len(xs) 
 
+
+
+Ndatasets = 10#len(xs) 
 for ds_id in range(Ndatasets):
     
     print('Generating dataset: ', ds_id)
     
     Nhits = 0 # this is a counter used to keep track on how many hits we have filled in total for every event.
     # these are just placeholders, in case we want to have more sophisticated datasets in the future.
-    Nevents = 1 
+    Nevents = 1
     Ntrk    = 1
 
     # create the output h5 file and define some fields we can start filling.
@@ -73,7 +75,7 @@ for ds_id in range(Ndatasets):
         h5_evt_pos[i_evt] = [xs[ds_id], ys[ds_id], zs[ds_id]]
 
         for i_trk in range(Ntrk):
-            Nphot = 50000
+            Nphot = 10000
             ray_direction = ray_origins = None
 
             if SIM_MODE == 0:
@@ -84,6 +86,16 @@ for ds_id in range(Ndatasets):
                 track_direction = generate_isotropic_random_vectors(1)[0]
                 ray_vectors = generate_vectors_on_cone_surface(track_direction, np.radians(40), Nphot)
                 ray_origins = np.ones((Nphot, 3)) * [xs[ds_id], ys[ds_id], zs[ds_id]]
+
+            elif SIM_MODE == 2:
+                track_direction = generate_isotropic_random_vectors(1)[0]
+                ray_vectors = generate_vectors_on_cone_surface(track_direction, np.radians(40), Nphot)
+                ray_origins = np.ones((Nphot, 3)) * [xs[ds_id], ys[ds_id], zs[ds_id]] + np.random.uniform(0, 1, (Nphot, 1))*track_direction
+
+            elif SIM_MODE == 3:
+                track_direction = np.array([0,1,1])
+                ray_vectors = generate_vectors_on_cone_surface(track_direction, np.radians(40), Nphot)
+                ray_origins = np.ones((Nphot, 3)) * [0, 0, 0] + 0.2*ds_id*track_direction
 
             good_indices = check_hits_vectorized_per_track_torch(np.array(ray_origins, dtype=np.float32),\
                                                                  np.array(ray_vectors, dtype=np.float32), \

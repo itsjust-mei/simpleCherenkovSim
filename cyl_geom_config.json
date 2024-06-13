@@ -5,6 +5,12 @@
     "radii": [3.6, 2.4, 1.2, 0],
     "divisions": [12, 8, 4, 1]
   },
+  "center": {
+    "center": [0, 0],
+    "heights": [0],
+    "radii": [0],
+    "divisions": [1]
+  },
   "geometry_definitions": {
     "center": [0, 0, 0],
     "axis": [0, 0, 1],
