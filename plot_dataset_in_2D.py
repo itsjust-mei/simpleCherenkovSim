@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 import pandas as pd
+import matplotlib
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -15,7 +17,7 @@ from tools.visualization import *
 
 # Set default values
 default_evt_ID = 0
-default_filename = 'datasets/sim_mode_0_dataset_0_events.h5'
+default_filename = 'datasets/sim_mode_3_dataset_1_events.h5'
 default_json_filename = 'cyl_geom_config.json'
 
 # Parse command-line arguments
